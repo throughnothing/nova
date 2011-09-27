@@ -220,12 +220,7 @@ class VMOps(object):
 
         # Ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
-            LOG.exception(_('instance %(instance_name)s: not enough free '
-                          'memory') % locals())
-            db.instance_set_state(nova_context.get_admin_context(),
-                                  instance['id'],
-                                  power_state.SHUTDOWN)
-            return
+            raise exception.InsufficientFreeMemory(uuid=instance.uuid)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance, context)
         kernel = None
@@ -549,12 +544,16 @@ class VMOps(object):
 
         """
         template_vm_ref = None
+        options = None
+        if instance['managed_disk']:
+            options = {'managed_disk': instance['managed_disk']}
         try:
             template_vm_ref, template_vdi_uuids =\
                     self._create_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(context,
-                    self._session, instance, template_vdi_uuids, image_id)
+                    self._session, instance, template_vdi_uuids, image_id,
+                    options)
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,
@@ -696,6 +695,11 @@ class VMOps(object):
 
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_default_sr(self._session)
+
+        # Set name-label so we can find if we need to clean up a failed
+        # migration
+        VMHelper.set_vdi_name_label(self._session, new_cow_uuid,
+                                    instance.name)
 
         return new_cow_uuid
 
