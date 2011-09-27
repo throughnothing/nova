@@ -53,7 +53,7 @@ def _parse_image_ref(image_href):
     o = urlparse(image_href)
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
-    image_id = int(o.path.split('/')[-1])
+    image_id = o.path.split('/')[-1]
     return (image_id, host, port)
 
 
@@ -103,7 +103,7 @@ def get_glance_client(context, image_href):
         glance_host, glance_port = pick_glance_api_server()
         glance_client = _create_glance_client(context, glance_host,
                                               glance_port)
-        return (glance_client, int(image_href))
+        return (glance_client, image_href)
 
     try:
         (image_id, host, port) = _parse_image_ref(image_href)
