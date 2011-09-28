@@ -41,6 +41,8 @@ def get_image_service(context, image_href):
 
     """
     image_href = image_href or 0
+    if utils.is_uuid_like(image_href):
+        return (get_default_image_service(), image_href)
     if str(image_href).isdigit():
         return (get_default_image_service(), int(image_href))
 
